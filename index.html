@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruleta de Perks de Asesino — Dead by Daylight</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-obsidian: #09090d;
+      --bg-panel: #12121a;
+      --bg-card: #181822;
+      --crimson: #dc2626;
+      --crimson-dark: #7f1d1d;
+      --entity-gold: #f59e0b;
+      --hex-purple: #9333ea;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-obsidian);
+      color: #f3f4f6;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(circle at 18% 20%, rgba(153, 27, 27, 0.16) 0%, transparent 45%),
+        radial-gradient(circle at 82% 80%, rgba(126, 34, 206, 0.14) 0%, transparent 45%);
+    }
+
+    body.obs-mode {
+      background: transparent !important;
+      background-color: rgba(0, 0, 0, 0) !important;
+    }
+
+    body.obs-mode .hide-in-obs {
+      display: none !important;
+    }
+
+    body.obs-mode #main-layout {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 0.5rem;
+    }
+
+    .font-dbd {
+      font-family: 'Cinzel', serif;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d0d14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2e2e3e;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b91c1c;
+    }
+
+    /* Dead by Daylight Diamond Perk Frame */
+    .dbd-diamond {
+      transform: rotate(45deg);
+      border: 2.5px solid #d4af37;
+      box-shadow:
+        0 0 18px rgba(220, 38, 38, 0.45),
+        inset 0 0 16px rgba(0, 0, 0, 0.85);
+      background: radial-gradient(circle, #3b0d11 0%, #140710 75%, #09050a 100%);
+      transition: all 0.25s ease;
+    }
+
+    .dbd-diamond.category-hex {
+      border-color: #c084fc;
+      background: radial-gradient(circle, #3b0764 0%, #170626 75%, #09050a 100%);
+      box-shadow: 0 0 18px rgba(168, 85, 247, 0.5), inset 0 0 16px rgba(0, 0, 0, 0.85);
+    }
+
+    .dbd-diamond.category-scourge {
+      border-color: #f87171;
+      background: radial-gradient(circle, #450a0a 0%, #1f0606 75%, #09050a 100%);
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.55), inset 0 0 16px rgba(0, 0, 0, 0.85);
+    }
+
+    .dbd-diamond-inner {
+      transform: rotate(-45deg);
+    }
+
+    /* Pointer animation */
+    @keyframes pointerTick {
+      0% { transform: translateY(-50%) rotate(0deg); }
+      35% { transform: translateY(-50%) rotate(-24deg); }
+      100% { transform: translateY(-50%) rotate(0deg); }
+    }
+
+    .pointer-tick {
+      animation: pointerTick 0.11s ease-out;
+    }
+
+    @keyframes modalPop {
+      0% { opacity: 0; transform: scale(0.86) translateY(12px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .animate-modal-pop {
+      animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .dragging-item {
+      opacity: 0.45;
+      border-color: #ef4444 !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-red-700 selection:text-white">
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Top Navbar (Hidden in OBS Mode) -->
+  <header class="hide-in-obs border-b border-zinc-800/80 bg-[#0d0d13]/90 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-700 to-red-950 border border-red-500/40 flex items-center justify-center shadow-lg shadow-red-950/50">
+          <!-- Killer Claw Slash SVG -->
+          <svg class="w-6 h-6 text-red-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M5 3L9 21M10 2L14 22M15 3L19 21M3 8L21 6" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="font-dbd text-lg sm:text-xl font-bold tracking-wider text-zinc-100 flex items-center gap-2">
+            RULETA DE KILLER PERKS
+            <span class="text-[11px] font-sans font-semibold px-2 py-0.5 rounded-full bg-red-950/90 text-red-300 border border-red-700/50">
+              DEAD BY DAYLIGHT
+            </span>
+          </h1>
+          <p class="text-xs text-zinc-400">Todas las perks de asesino en inglés • Listo para Twitch &amp; OBS</p>
+        </div>
+      </div>
+
+      <!-- Header Quick Actions -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="btn-sound-toggle" type="button" title="Activar o silenciar sonido"
+          class="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-medium text-zinc-200 flex items-center gap-1.5 transition cursor-pointer">
+          <span id="sound-icon">🔊</span>
+          <span id="sound-label">Sonido: ON</span>
+        </button>
+
+        <button id="btn-obs-mode" type="button" title="Modo transparente para OBS Browser Source"
+          class="px-3 py-2 rounded-xl bg-purple-950/70 hover:bg-purple-900/80 border border-purple-600/50 text-xs font-semibold text-purple-200 flex items-center gap-1.5 transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Modo OBS
+        </button>
+
+        <button id="btn-export-json" type="button" title="Exportar configuración e iconos en JSON"
+          class="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-medium text-zinc-300 transition cursor-pointer">
+          💾 Exportar
+        </button>
+
+        <label title="Importar configuración JSON"
+          class="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-medium text-zinc-300 transition cursor-pointer">
+          📂 Importar
+          <input id="input-import-json" type="file" accept=".json" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- Floating Exit OBS Button (Only visible in OBS Mode on hover) -->
+  <button id="btn-exit-obs" type="button"
+    class="hidden fixed top-3 right-3 z-50 px-3 py-1.5 rounded-xl bg-black/75 hover:bg-red-900 text-xs text-white/80 hover:text-white border border-white/15 backdrop-blur-sm transition opacity-25 hover:opacity-100 cursor-pointer">
+    Salir Modo OBS
+  </button>
+
+  <!-- Main Workspace -->
+  <main id="main-layout" class="flex-1 max-w-[1600px] w-full mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- LEFT / CENTER COLUMN: Roulette Wheel + 4-Perk Loadout -->
+    <section class="lg:col-span-7 flex flex-col items-center justify-center w-full">
+
+      <!-- Wheel Container -->
+      <div class="relative w-full max-w-[600px] aspect-square flex items-center justify-center my-1">
+        <!-- Outer Ambient Glow -->
+        <div class="hide-in-obs absolute inset-4 rounded-full bg-red-600/10 blur-2xl pointer-events-none"></div>
+
+        <!-- Canvas -->
+        <canvas id="wheel-canvas" class="w-full h-full rounded-full drop-shadow-[0_0_28px_rgba(0,0,0,0.9)] cursor-pointer"></canvas>
+
+        <!-- Right-side Pointer Flapper -->
+        <div id="wheel-pointer"
+          class="absolute right-[-6px] sm:right-[-10px] top-1/2 -translate-y-1/2 z-20 pointer-events-none select-none drop-shadow-[0_4px_10px_rgba(0,0,0,0.95)]">
+          <svg width="46" height="38" viewBox="0 0 46 38" fill="none">
+            <path d="M2 19L42 3L35 19L42 35L2 19Z" fill="url(#pointerGrad)" stroke="#fef08a" stroke-width="2"/>
+            <circle cx="35" cy="19" r="3.5" fill="#18181b" stroke="#f59e0b" stroke-width="1.5"/>
+            <defs>
+              <linearGradient id="pointerGrad" x1="2" y1="19" x2="42" y2="19" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#ef4444"/>
+                <stop offset="1" stop-color="#7f1d1d"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        <!-- Center Hub Spin Button -->
+        <button id="btn-center-spin" type="button" title="Girar Ruleta (Espacio)"
+          class="absolute z-20 w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-zinc-900 via-zinc-950 to-black border-4 border-amber-500/80 shadow-[0_0_25px_rgba(220,38,38,0.65)] hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-center group cursor-pointer">
+          <span class="font-dbd text-xs sm:text-sm font-black tracking-widest text-amber-400 group-hover:text-red-400 transition">GIRAR</span>
+          <span id="wheel-active-count" class="text-[10px] font-semibold text-zinc-400 mt-0.5">0 perks</span>
+        </button>
+      </div>
+
+      <!-- Primary Controls Bar (Hidden in OBS Mode) -->
+      <div class="hide-in-obs w-full max-w-[640px] mt-4 bg-[#12121a]/95 border border-zinc-800/90 rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="btn-spin-single" type="button"
+            class="py-3 px-4 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-800 hover:from-red-600 hover:to-red-700 text-white font-bold text-sm tracking-wide shadow-lg shadow-red-950/60 border border-red-400/30 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer">
+            <span>🎲</span>
+            <span>Girar 1 Perk (Espacio)</span>
+          </button>
+
+          <button id="btn-spin-build" type="button"
+            class="py-3 px-4 rounded-xl bg-gradient-to-r from-amber-700 via-amber-600 to-orange-700 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm tracking-wide shadow-lg shadow-amber-950/60 border border-amber-300/30 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer">
+            <span>💀</span>
+            <span>Build Completa (4 Perks)</span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-zinc-800/80 text-xs">
+          <label class="flex items-center gap-2 text-zinc-300 cursor-pointer select-none">
+            <input id="chk-auto-remove" type="checkbox" class="w-4 h-4 rounded accent-red-600 bg-zinc-900 border-zinc-700 cursor-pointer" />
+            <span>Eliminar perk al salir (sin repetir)</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <span id="disabled-counter-badge" class="text-zinc-400"></span>
+            <button id="btn-restore-all" type="button"
+              class="px-2.5 py-1 rounded-lg bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 font-medium transition cursor-pointer">
+              ↺ Restaurar todas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4-Perk Build Loadout Display -->
+      <div id="build-loadout-card" class="hide-in-obs w-full max-w-[640px] mt-4 bg-[#12121a]/95 border border-zinc-800/90 rounded-2xl p-4 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-dbd text-sm font-bold tracking-wider text-amber-400 uppercase flex items-center gap-2">
+            <span>⚔️</span> Build de Asesino Actual (4 Slots)
+          </h2>
+          <div class="flex items-center gap-2">
+            <button id="btn-copy-build" type="button"
+              class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-[11px] font-medium text-zinc-200 transition cursor-pointer">
+              📋 Copiar Build
+            </button>
+            <button id="btn-clear-build" type="button"
+              class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition cursor-pointer">
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div id="build-slots-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Complete Killer Perks Manager (Hidden in OBS Mode) -->
+    <aside class="hide-in-obs lg:col-span-5 w-full bg-[#12121a]/95 border border-zinc-800/90 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-4 max-h-[calc(100vh-6rem)]">
+
+      <!-- Manager Header -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="font-dbd text-base font-bold text-zinc-100 tracking-wide">CATÁLOGO DE KILLER PERKS</h2>
+          <p id="catalog-stats" class="text-xs text-zinc-400">Cargando perks...</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-1.5">
+          <!-- Folder Upload (Recursive DbD Perks folder) -->
+          <label title="Selecciona la carpeta Perks de tu juego o Icon Pack (lee subcarpetas automáticamente)"
+            class="px-2.5 py-1.5 rounded-xl bg-amber-950/85 hover:bg-amber-900 border border-amber-600/50 text-xs font-semibold text-amber-200 flex items-center gap-1 transition cursor-pointer">
+            <span>📁</span>
+            <span>Carpeta</span>
+            <input id="input-folder-icons" type="file" webkitdirectory directory multiple class="hidden" />
+          </label>
+
+          <!-- ZIP or Multiple Images Upload -->
+          <label title="Sube un archivo .zip de un Icon Pack completo o múltiples imágenes PNG/WebP"
+            class="px-2.5 py-1.5 rounded-xl bg-purple-950/85 hover:bg-purple-900 border border-purple-600/50 text-xs font-semibold text-purple-200 flex items-center gap-1 transition cursor-pointer">
+            <span>🗜️</span>
+            <span>ZIP / Imágenes</span>
+            <input id="input-bulk-icons" type="file" accept=".zip,image/*" multiple class="hidden" />
+          </label>
+
+          <!-- Add Custom Perk -->
+          <button id="btn-open-add-perk" type="button"
+            class="px-2.5 py-1.5 rounded-xl bg-red-900/80 hover:bg-red-800 border border-red-600/50 text-xs font-semibold text-red-100 transition cursor-pointer">
+            + Añadir
+          </button>
+        </div>
+      </div>
+
+      <!-- Search & Killer Filter -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div class="sm:col-span-2 relative">
+          <input id="search-input" type="text" placeholder="Buscar perk o asesino (ej. Pain Resonance, Hex, Nurse...)"
+            class="w-full pl-9 pr-8 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:outline-none text-xs text-zinc-100 placeholder-zinc-500" />
+          <svg class="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <button id="btn-clear-search" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 text-xs cursor-pointer">✕</button>
+        </div>
+
+        <select id="killer-filter-select"
+          class="w-full px-2.5 py-2 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-red-600 focus:outline-none text-xs text-zinc-200 cursor-pointer">
+          <option value="ALL">Todos los Killers</option>
+        </select>
+      </div>
+
+      <!-- Category Filter Pills & Batch Toggle -->
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div id="category-pills" class="flex flex-wrap gap-1.5 text-[11px] font-semibold">
+          <button data-cat="ALL" class="cat-pill px-2.5 py-1 rounded-lg bg-red-700 text-white cursor-pointer">Todas</button>
+          <button data-cat="ENABLED" class="cat-pill px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">Activas</button>
+          <button data-cat="Hex" class="cat-pill px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">Hex</button>
+          <button data-cat="Scourge Hook" class="cat-pill px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">Scourge Hook</button>
+          <button data-cat="General" class="cat-pill px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">Generales</button>
+          <button data-cat="WITH_ICON" class="cat-pill px-2.5 py-1 rounded-lg bg-zinc-900 text-zinc-400 hover:text-zinc-200 cursor-pointer">Con Icono</button>
+        </div>
+
+        <div class="flex items-center gap-1.5 text-[11px]">
+          <button id="btn-enable-filtered" type="button" class="px-2 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/40 transition cursor-pointer">
+            Activar filtro
+          </button>
+          <button id="btn-disable-filtered" type="button" class="px-2 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-400 border border-zinc-700/50 transition cursor-pointer">
+            Desactivar filtro
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Perk List -->
+      <div id="perks-list-container" class="flex-1 overflow-y-auto pr-1 space-y-1.5 min-h-[320px]">
+        <!-- Perks rendered here -->
+      </div>
+
+      <!-- Reset Database Footer -->
+      <div class="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-500">
+        <span>Arrastra para reordenar • Haz clic en ✏️ para editar</span>
+        <button id="btn-factory-reset" type="button" class="text-red-400/80 hover:text-red-300 underline cursor-pointer">
+          Restablecer lista original
+        </button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- WINNER RESULT MODAL (Compact, OBS-friendly, with quick edit pencil) -->
+  <div id="winner-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="animate-modal-pop relative w-full max-w-sm rounded-3xl bg-gradient-to-b from-[#1a131c] to-[#0d0c12] border-2 border-amber-500/60 shadow-[0_0_50px_rgba(220,38,38,0.45)] p-6 text-center">
+
+      <!-- Quick Edit Pencil Button in top-right -->
+      <button id="btn-modal-edit-perk" type="button" title="Editar esta perk"
+        class="absolute top-3.5 right-3.5 w-9 h-9 rounded-full bg-zinc-800/90 hover:bg-amber-600 text-zinc-200 hover:text-white border border-zinc-700 flex items-center justify-center transition cursor-pointer">
+        ✏️
+      </button>
+
+      <p id="modal-subtitle-badge" class="text-[11px] font-bold uppercase tracking-[0.2em] text-red-400 mb-4">
+        PERK SELECCIONADA
+      </p>
+
+      <!-- Diamond Perk Display -->
+      <div class="my-5 flex items-center justify-center">
+        <div id="modal-diamond-frame" class="dbd-diamond w-28 h-28 rounded-2xl flex items-center justify-center overflow-hidden">
+          <div id="modal-diamond-content" class="dbd-diamond-inner w-full h-full flex items-center justify-center">
+            <!-- Icon or SVG badge -->
+          </div>
+        </div>
+      </div>
+
+      <h3 id="modal-perk-name" class="font-dbd text-2xl font-black text-white tracking-wide mt-4 leading-tight">
+        Hex: Ruin
+      </h3>
+      <p id="modal-perk-owner" class="text-xs font-medium text-amber-400/90 mt-1">
+        The Hag • Hex Perk
+      </p>
+
+      <!-- Compact Action Buttons -->
+      <div class="mt-6 flex items-center justify-center gap-2.5">
+        <button id="btn-modal-remove-perk" type="button"
+          class="px-3.5 py-2 rounded-full bg-red-950/90 hover:bg-red-800 text-red-200 border border-red-700/60 text-xs font-semibold transition cursor-pointer">
+          🗑️ Quitar de ruleta
+        </button>
+
+        <button id="btn-modal-close" type="button"
+          class="px-5 py-2 rounded-full bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold shadow-md transition cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT / ADD PERK MODAL -->
+  <div id="edit-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="animate-modal-pop w-full max-w-md rounded-2xl bg-[#14141e] border border-zinc-700/90 shadow-2xl p-5">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+        <h3 id="edit-modal-title" class="font-dbd text-base font-bold text-zinc-100">Editar Perk</h3>
+        <button id="btn-close-edit-modal" type="button" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm cursor-pointer">✕</button>
+      </div>
+
+      <form id="edit-perk-form" class="mt-4 space-y-3.5 text-xs">
+        <input type="hidden" id="edit-perk-id" />
+
+        <div>
+          <label class="block text-zinc-400 font-medium mb-1">Nombre de la Perk (en Inglés)</label>
+          <input id="edit-perk-name" type="text" required
+            class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-red-500 focus:outline-none text-zinc-100" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-zinc-400 font-medium mb-1">Asesino / Origen</label>
+            <input id="edit-perk-killer" type="text" placeholder="Ej. The Trapper o General"
+              class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-red-500 focus:outline-none text-zinc-100" />
+          </div>
+
+          <div>
+            <label class="block text-zinc-400 font-medium mb-1">Categoría</label>
+            <select id="edit-perk-category"
+              class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-700 focus:border-red-500 focus:outline-none text-zinc-100">
+              <option value="Standard">Standard</option>
+              <option value="Hex">Hex</option>
+              <option value="Scourge Hook">Scourge Hook</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 items-center">
+          <div>
+            <label class="block text-zinc-400 font-medium mb-1">Color del segmento</label>
+            <div class="flex items-center gap-2">
+              <input id="edit-perk-color" type="color" class="w-10 h-9 rounded-lg bg-transparent border-0 cursor-pointer" />
+              <span id="edit-color-hex" class="text-zinc-400 font-mono">#991b1b</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-zinc-400 font-medium mb-1">Icono personalizado</label>
+            <label class="block w-full text-center px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium cursor-pointer transition">
+              📁 Elegir imagen
+              <input id="edit-perk-image-file" type="file" accept="image/*" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="flex items-center justify-between bg-zinc-950/90 border border-zinc-800 rounded-xl p-2.5">
+          <div class="flex items-center gap-3">
+            <img id="edit-image-preview" src="" alt="Preview" class="hidden w-11 h-11 object-contain rounded-lg bg-zinc-900 p-1 border border-zinc-700" />
+            <span id="edit-no-image-text" class="text-zinc-500 italic">Sin icono personalizado</span>
+          </div>
+          <button id="btn-remove-perk-image" type="button" class="hidden px-2.5 py-1 rounded-lg bg-red-950 hover:bg-red-900 text-red-300 text-[11px] cursor-pointer">
+            Quitar imagen
+          </button>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button id="btn-delete-custom-perk" type="button" class="hidden mr-auto px-3 py-2 rounded-xl bg-red-950/80 hover:bg-red-900 text-red-300 font-semibold cursor-pointer">
+            Eliminar perk
+          </button>
+          <button id="btn-cancel-edit" type="button" class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold cursor-pointer">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONFIRMATION MODAL (No browser confirm() used) -->
+  <div id="confirm-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="animate-modal-pop w-full max-w-sm rounded-2xl bg-[#151520] border border-zinc-700 p-5 text-center shadow-2xl">
+      <h3 id="confirm-title" class="font-dbd text-base font-bold text-white">¿Estás seguro?</h3>
+      <p id="confirm-message" class="text-xs text-zinc-400 mt-2 leading-relaxed"></p>
+      <div class="mt-5 flex items-center justify-center gap-2.5">
+        <button id="btn-confirm-cancel" type="button" class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-semibold text-zinc-200 cursor-pointer">
+          Cancelar
+        </button>
+        <button id="btn-confirm-accept" type="button" class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-600 text-xs font-bold text-white cursor-pointer">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * COMPLETE DEAD BY DAYLIGHT KILLER PERKS DATABASE (ENGLISH NAMES)
+     * Includes all General Perks and Teachable Killer Perks through latest chapters.
+     */
+    const DEFAULT_KILLER_PERKS = [
+      // General Killer Perks
+      { name: "Bitter Murmur", killer: "General", category: "Standard" },
+      { name: "Deerstalker", killer: "General", category: "Standard" },
+      { name: "Distressing", killer: "General", category: "Standard" },
+      { name: "Hex: No One Escapes Death", killer: "General", category: "Hex" },
+      { name: "Hex: Thrill of the Hunt", killer: "General", category: "Hex" },
+      { name: "Insidious", killer: "General", category: "Standard" },
+      { name: "Iron Grasp", killer: "General", category: "Standard" },
+      { name: "Scourge Hook: Monstrous Shrine", killer: "General", category: "Scourge Hook" },
+      { name: "Shattered Hope", killer: "General", category: "Standard" },
+      { name: "Sloppy Butcher", killer: "General", category: "Standard" },
+      { name: "Spies from the Shadows", killer: "General", category: "Standard" },
+      { name: "Unrelenting", killer: "General", category: "Standard" },
+      { name: "Whispers", killer: "General", category: "Standard" },
+
+      // The Trapper
+      { name: "Unnerving Presence", killer: "The Trapper", category: "Standard" },
+      { name: "Brutal Strength", killer: "The Trapper", category: "Standard" },
+      { name: "Agitation", killer: "The Trapper", category: "Standard" },
+
+      // The Wraith
+      { name: "Predator", killer: "The Wraith", category: "Standard" },
+      { name: "Bloodhound", killer: "The Wraith", category: "Standard" },
+      { name: "Shadowborn", killer: "The Wraith", category: "Standard" },
+
+      // The Hillbilly
+      { name: "Enduring", killer: "The Hillbilly", category: "Standard" },
+      { name: "Lightborn", killer: "The Hillbilly", category: "Standard" },
+      { name: "Tinkerer", killer: "The Hillbilly", category: "Standard" },
+
+      // The Nurse
+      { name: "Stridor", killer: "The Nurse", category: "Standard" },
+      { name: "Thanatophobia", killer: "The Nurse", category: "Standard" },
+      { name: "A Nurse's Calling", killer: "The Nurse", category: "Standard" },
+
+      // The Shape (Michael Myers / Renamed variants included)
+      { name: "Save the Best for Last", killer: "The Shape", category: "Standard" },
+      { name: "Play with Your Food", killer: "The Shape", category: "Standard" },
+      { name: "Dying Light", killer: "The Shape", category: "Standard" },
+
+      // The Hag
+      { name: "Hex: The Third Seal", killer: "The Hag", category: "Hex" },
+      { name: "Hex: Ruin", killer: "The Hag", category: "Hex" },
+      { name: "Hex: Devour Hope", killer: "The Hag", category: "Hex" },
+
+      // The Doctor
+      { name: "Overwhelming Presence", killer: "The Doctor", category: "Standard" },
+      { name: "Monitor & Abuse", killer: "The Doctor", category: "Standard" },
+      { name: "Overcharge", killer: "The Doctor", category: "Standard" },
+
+      // The Huntress
+      { name: "Beast of Prey", killer: "The Huntress", category: "Standard" },
+      { name: "Territorial Imperative", killer: "The Huntress", category: "Standard" },
+      { name: "Hex: Huntress Lullaby", killer: "The Huntress", category: "Hex" },
+
+      // The Cannibal
+      { name: "Knock Out", killer: "The Cannibal", category: "Standard" },
+      { name: "Barbecue & Chili", killer: "The Cannibal", category: "Standard" },
+      { name: "Franklin's Demise", killer: "The Cannibal", category: "Standard" },
+
+      // The Nightmare
+      { name: "Fire Up", killer: "The Nightmare", category: "Standard" },
+      { name: "Remember Me", killer: "The Nightmare", category: "Standard" },
+      { name: "Blood Warden", killer: "The Nightmare", category: "Standard" },
+
+      // The Pig
+      { name: "Scourge Hook: Hangman's Trick", killer: "The Pig", category: "Scourge Hook" },
+      { name: "Surveillance", killer: "The Pig", category: "Standard" },
+      { name: "Make Your Choice", killer: "The Pig", category: "Standard" },
+
+      // The Clown
+      { name: "Bamboozle", killer: "The Clown", category: "Standard" },
+      { name: "Coulrophobia", killer: "The Clown", category: "Standard" },
+      { name: "Pop Goes the Weasel", killer: "The Clown", category: "Standard" },
+
+      // The Spirit
+      { name: "Spirit Fury", killer: "The Spirit", category: "Standard" },
+      { name: "Hex: Haunted Ground", killer: "The Spirit", category: "Hex" },
+      { name: "Rancor", killer: "The Spirit", category: "Standard" },
+
+      // The Legion
+      { name: "Discordance", killer: "The Legion", category: "Standard" },
+      { name: "Mad Grit", killer: "The Legion", category: "Standard" },
+      { name: "Iron Maiden", killer: "The Legion", category: "Standard" },
+
+      // The Plague
+      { name: "Corrupt Intervention", killer: "The Plague", category: "Standard" },
+      { name: "Infectious Fright", killer: "The Plague", category: "Standard" },
+      { name: "Dark Devotion", killer: "The Plague", category: "Standard" },
+
+      // The Ghost Face
+      { name: "I'm All Ears", killer: "The Ghost Face", category: "Standard" },
+      { name: "Thrilling Tremors", killer: "The Ghost Face", category: "Standard" },
+      { name: "Furtive Chase", killer: "The Ghost Face", category: "Standard" },
+
+      // The Demogorgon
+      { name: "Surge", killer: "The Demogorgon", category: "Standard" },
+      { name: "Cruel Limits", killer: "The Demogorgon", category: "Standard" },
+      { name: "Mindbreaker", killer: "The Demogorgon", category: "Standard" },
+
+      // The Oni
+      { name: "Zanshin Tactics", killer: "The Oni", category: "Standard" },
+      { name: "Blood Echo", killer: "The Oni", category: "Standard" },
+      { name: "Nemesis", killer: "The Oni", category: "Standard" },
+
+      // The Deathslinger
+      { name: "Gearhead", killer: "The Deathslinger", category: "Standard" },
+      { name: "Dead Man's Switch", killer: "The Deathslinger", category: "Standard" },
+      { name: "Hex: Retribution", killer: "The Deathslinger", category: "Hex" },
+
+      // The Executioner
+      { name: "Forced Penance", killer: "The Executioner", category: "Standard" },
+      { name: "Trail of Torment", killer: "The Executioner", category: "Standard" },
+      { name: "Deathbound", killer: "The Executioner", category: "Standard" },
+
+      // The Blight
+      { name: "Dragon's Grip", killer: "The Blight", category: "Standard" },
+      { name: "Hex: Blood Favor", killer: "The Blight", category: "Hex" },
+      { name: "Hex: Undying", killer: "The Blight", category: "Hex" },
+
+      // The Twins
+      { name: "Hoarder", killer: "The Twins", category: "Standard" },
+      { name: "Oppression", killer: "The Twins", category: "Standard" },
+      { name: "Coup de Grâce", killer: "The Twins", category: "Standard" },
+
+      // The Trickster
+      { name: "Starstruck", killer: "The Trickster", category: "Standard" },
+      { name: "Hex: Crowd Control", killer: "The Trickster", category: "Hex" },
+      { name: "No Way Out", killer: "The Trickster", category: "Standard" },
+
+      // The Nemesis
+      { name: "Lethal Pursuer", killer: "The Nemesis", category: "Standard" },
+      { name: "Hysteria", killer: "The Nemesis", category: "Standard" },
+      { name: "Eruption", killer: "The Nemesis", category: "Standard" },
+
+      // The Cenobite
+      { name: "No Holds Barred", killer: "The Cenobite", category: "Standard" },
+      { name: "Hex: Plaything", killer: "The Cenobite", category: "Hex" },
+      { name: "Scourge Hook: Gift of Pain", killer: "The Cenobite", category: "Scourge Hook" },
+
+      // The Artist
+      { name: "Grim Embrace", killer: "The Artist", category: "Standard" },
+      { name: "Scourge Hook: Pain Resonance", killer: "The Artist", category: "Scourge Hook" },
+      { name: "Hex: Pentimento", killer: "The Artist", category: "Hex" },
+
+      // The Onryō
+      { name: "Scourge Hook: Floods of Rage", killer: "The Onryō", category: "Scourge Hook" },
+      { name: "Call of Brine", killer: "The Onryō", category: "Standard" },
+      { name: "Merciless Storm", killer: "The Onryō", category: "Standard" },
+
+      // The Dredge
+      { name: "Dissolution", killer: "The Dredge", category: "Standard" },
+      { name: "Darkness Revealed", killer: "The Dredge", category: "Standard" },
+      { name: "Septic Touch", killer: "The Dredge", category: "Standard" },
+
+      // The Mastermind
+      { name: "Superior Anatomy", killer: "The Mastermind", category: "Standard" },
+      { name: "Awakened Awareness", killer: "The Mastermind", category: "Standard" },
+      { name: "Terminus", killer: "The Mastermind", category: "Standard" },
+
+      // The Knight
+      { name: "Nowhere to Hide", killer: "The Knight", category: "Standard" },
+      { name: "Hex: Face the Darkness", killer: "The Knight", category: "Hex" },
+      { name: "Hubris", killer: "The Knight", category: "Standard" },
+
+      // The Skull Merchant
+      { name: "Game Afoot", killer: "The Skull Merchant", category: "Standard" },
+      { name: "THWACK!", killer: "The Skull Merchant", category: "Standard" },
+      { name: "Leverage", killer: "The Skull Merchant", category: "Standard" },
+
+      // The Singularity
+      { name: "Genetic Limits", killer: "The Singularity", category: "Standard" },
+      { name: "Forced Hesitation", killer: "The Singularity", category: "Standard" },
+      { name: "Machine Learning", killer: "The Singularity", category: "Standard" },
+
+      // The Xenomorph
+      { name: "Ultimate Weapon", killer: "The Xenomorph", category: "Standard" },
+      { name: "Rapid Brutality", killer: "The Xenomorph", category: "Standard" },
+      { name: "Alien Instinct", killer: "The Xenomorph", category: "Standard" },
+
+      // The Good Guy (Chucky)
+      { name: "Hex: Two Can Play", killer: "The Good Guy", category: "Hex" },
+      { name: "Friends 'Til the End", killer: "The Good Guy", category: "Standard" },
+      { name: "Batteries Included", killer: "The Good Guy", category: "Standard" },
+
+      // The Unknown
+      { name: "Unbound", killer: "The Unknown", category: "Standard" },
+      { name: "Unforeseen", killer: "The Unknown", category: "Standard" },
+      { name: "Undone", killer: "The Unknown", category: "Standard" },
+
+      // The Lich (Vecna)
+      { name: "Weave Attunement", killer: "The Lich", category: "Standard" },
+      { name: "Languid Touch", killer: "The Lich", category: "Standard" },
+      { name: "Dark Arrogance", killer: "The Lich", category: "Standard" },
+
+      // The Dark Lord (Dracula)
+      { name: "Hex: Wretched Fate", killer: "The Dark Lord", category: "Hex" },
+      { name: "Human Greed", killer: "The Dark Lord", category: "Standard" },
+      { name: "Dominance", killer: "The Dark Lord", category: "Standard" },
+
+      // The Houndmaster
+      { name: "All-Shaking Thunder", killer: "The Houndmaster", category: "Standard" },
+      { name: "Scourge Hook: Jagged Compass", killer: "The Houndmaster", category: "Scourge Hook" },
+      { name: "No Quarter", killer: "The Houndmaster", category: "Standard" },
+
+      // The Ghoul (Ken Kaneki)
+      { name: "Hex: Nothing But Misery", killer: "The Ghoul", category: "Hex" },
+      { name: "Forever Entwined", killer: "The Ghoul", category: "Standard" },
+      { name: "None Are Free", killer: "The Ghoul", category: "Standard" },
+
+      // The Animatronic (Springtrap)
+      { name: "Help Wanted", killer: "The Animatronic", category: "Standard" },
+      { name: "Phantom Fear", killer: "The Animatronic", category: "Standard" },
+      { name: "Haywire", killer: "The Animatronic", category: "Standard" },
+
+      // The Krasue
+      { name: "Ravenous", killer: "The Krasue", category: "Standard" },
+      { name: "Wandering Eye", killer: "The Krasue", category: "Standard" },
+      { name: "Hex: Overture of Doom", killer: "The Krasue", category: "Hex" },
+
+      // The First (Henry Creel / Vecna ST)
+      { name: "Turn Back The Clock", killer: "The First", category: "Standard" },
+      { name: "Secret Project", killer: "The First", category: "Standard" },
+      { name: "Hex: Hive Mind", killer: "The First", category: "Hex" },
+
+      // The Judgment
+      { name: "Celestial Witness", killer: "The Judgment", category: "Standard" },
+      { name: "Lay Waste", killer: "The Judgment", category: "Standard" },
+      { name: "Hex: Under Your Thumb", killer: "The Judgment", category: "Hex" },
+
+      // The Slasher
+      { name: "Rampage", killer: "The Slasher", category: "Standard" },
+      { name: "Silent Shadow", killer: "The Slasher", category: "Standard" },
+      { name: "Hex: Scared to Death", killer: "The Slasher", category: "Hex" }
+    ];
+
+    /**
+     * Aliases dictionary so bulk icon uploads match both canonical, legacy, and internal DbD asset filenames
+     */
+    const PERK_FILENAME_ALIASES = {
+      // General & Early Chapters
+      "savethebestforlast": ["keepthemwaiting", "stbfl"],
+      "playwithyourfood": ["seehowtheyrun", "pwyf"],
+      "dyinglight": ["culltheweak"],
+      "noholdsbarred": ["deadlock", "k25p01"],
+      "surge": ["jolt", "k17p01"],
+      "cruellimits": ["claustrophobia", "k17p02"],
+      "mindbreaker": ["fearmonger", "k17p03"],
+      "scourgehookmonstrousshrine": ["monstrousshrine"],
+      "scourgehookhangmanstrick": ["hangmanstrick", "hangmans"],
+      "hexnooneescapesdeath": ["noed", "nooneescapesdeath"],
+      "hexthrillofthehunt": ["thrillofthehunt"],
+      "spiesfromtheshadows": ["spiesfromtheshadow"],
+      "anursescalling": ["nursescalling", "nurse"],
+      "overcharge": ["generatorovercharge"],
+      "monitorabuse": ["monitorandabuse"],
+      "hexhuntresslullaby": ["huntresslullaby"],
+      "barbecuechili": ["bbq", "barbecueandchili", "bbqandchili"],
+      "franklinsdemise": ["franklins"],
+      "popgoestheweasel": ["pop"],
+      "hexhauntedground": ["hauntedground", "hauntedgrounds"],
+      "hexthethirdseal": ["thethirdseal", "thirdseal"],
+      "hexruin": ["ruin"],
+      "hexdevourhope": ["devourhope"],
+      "imallEars": ["imallears"],
+      "imallears": ["imallear"],
+      "deadmansswitch": ["deadmans", "deadman"],
+      "hexretribution": ["retribution"],
+      "dragonsgrip": ["dragongrip"],
+      "hexbloodfavor": ["bloodfavor", "bloodfavour"],
+      "hexundying": ["undying"],
+      "coupdegrace": ["coupdegrce", "coup"],
+      "hexcrowdcontrol": ["crowdcontrol"],
+      "hexplaything": ["plaything", "fortunestool", "k25p02"],
+      "scourgehookgiftofpain": ["giftofpain", "k25p03"],
+      "scourgehookpainresonance": ["painresonance", "painres", "k26p02"],
+      "grimembrace": ["k26p01"],
+      "hexpentimento": ["pentimento", "k26p03"],
+      "scourgehookfloodsofrage": ["floodsofrage", "k27p01"],
+      "callofbrine": ["k27p02"],
+      "mercilessstorm": ["k27p03"],
+      "dissolution": ["k28p01"],
+      "darknessrevealed": ["k28p02"],
+      "septictouch": ["k28p03"],
+      "superioranatomy": ["k29p01"],
+      "awakenedawareness": ["k29p02"],
+      "terminus": ["k29p03"],
+      "nowheretohide": ["k30p01"],
+      "hexfacethedarkness": ["facethedarkness", "k30p02"],
+      "hubris": ["k30p03"],
+      "gameafoot": ["k31p01"],
+      "thwack": ["k31p02"],
+      "leverage": ["k31p03"],
+      "geneticlimits": ["k32p01"],
+      "forcedhesitation": ["k32p02"],
+      "machinelearning": ["k32p03"],
+      "ultimateweapon": ["k33p01"],
+      "rapidbrutality": ["k33p02"],
+      "alieninstinct": ["k33p03"],
+      "hextwocanplay": ["twocanplay", "k34p01"],
+      "friendstiltheend": ["friendstilltheend", "friendstotheend", "k34p02"],
+      "batteriesincluded": ["k34p03"],
+      "unbound": ["k35p01"],
+      "unforeseen": ["k35p02"],
+      "undone": ["k35p03"],
+      "weaveattunement": ["k36p01"],
+      "languidtouch": ["k36p02"],
+      "darkarrogance": ["k36p03"],
+      "hexwretchedfate": ["wretchedfate", "k37p01"],
+      "humangreed": ["k37p02"],
+      "dominance": ["k37p03"],
+      "allshakingthunder": ["k38p01"],
+      "scourgehookjaggedcompass": ["jaggedcompass", "k38p02"],
+      "noquarter": ["k38p03"],
+      "hexnothingbutmisery": ["nothingbutmisery", "k39p01"],
+      "foreverentwined": ["k39p02"],
+      "nonearefree": ["k39p03"],
+      "helpwanted": ["k40p01"],
+      "phantomfear": ["k40p02"],
+      "haywire": ["k40p03"],
+      "ravenous": ["k41p01"],
+      "wanderingeye": ["k41p02"],
+      "hexovertureofdoom": ["overtureofdoom", "k41p03"],
+      "turnbacktheclock": ["k42p01"],
+      "secretproject": ["k42p02"],
+      "hexhivemind": ["hivemind", "k42p03"],
+      "celestialwitness": ["k43p01"],
+      "laywaste": ["k43p02"],
+      "hexunderyourthumb": ["underyourthumb", "k43p03"],
+      "rampage": ["k44p01"],
+      "silentshadow": ["k44p02"],
+      "hexscaredtodeath": ["scaredtodeath", "k44p03"]
+    };
+
+    // Atmospheric DbD color palette for wheel slices
+    const SLICE_PALETTES = {
+      Hex: ["#581c87", "#6b21a8", "#4c1d95", "#701a75"],
+      "Scourge Hook": ["#991b1b", "#7f1d1d", "#b91c1c", "#881337"],
+      Standard: ["#1e1b2e", "#271a24", "#18222f", "#291d18", "#1f1c2c", "#2b161b"]
+    };
+
+    const STORAGE_KEY = "dbd_killer_perks_roulette_v1";
+
+    // Application State
+    let state = {
+      perks: [],
+      currentBuild: [], // Array of up to 4 perk IDs
+      autoRemove: false,
+      soundEnabled: true,
+      obsMode: false,
+      searchQuery: "",
+      killerFilter: "ALL",
+      categoryFilter: "ALL"
+    };
+
+    // Wheel Animation State
+    let currentRotation = 0;
+    let isSpinning = false;
+    let lastTickIndex = -1;
+    let currentWinnerPerk = null;
+    let editingPerkImageTemp = null;
+    let draggedPerkId = null;
+
+    // Web Audio API Context for procedural ticks & fanfare
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function playTickSound() {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(140, audioCtx.currentTime + 0.035);
+
+        gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.035);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.04);
+      } catch (e) {}
+    }
+
+    function playWinSound() {
+      if (!state.soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const notes = [220, 277.18, 329.63, 440]; // A minor / dark entity chord
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = idx === 3 ? "sawtooth" : "triangle";
+          const startTime = audioCtx.currentTime + idx * 0.055;
+          osc.frequency.setValueAtTime(freq, startTime);
+          gain.gain.setValueAtTime(0.09, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.0008, startTime + 0.65);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.68);
+        });
+      } catch (e) {}
+    }
+
+    // Utility: Normalize string for smart icon matching
+    function normalizeKey(str) {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/^(t_)?(ui_)?(icon)?perks[_\-\s]*/i, "")
+        .replace(/\.(png|jpg|jpeg|webp|gif|svg)$/i, "")
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    // Generate default killer perks list with colors
+    function generateDefaultPerksList() {
+      return DEFAULT_KILLER_PERKS.map((item, idx) => {
+        const palette = SLICE_PALETTES[item.category] || SLICE_PALETTES.Standard;
+        const color = palette[idx % palette.length];
+        return {
+          id: "perk_" + idx,
+          name: item.name,
+          killer: item.killer,
+          category: item.category,
+          color,
+          image: null,
+          enabled: true,
+          isCustom: false
+        };
+      });
+    }
+
+    // Load & Save State
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.perks) && parsed.perks.length > 0) {
+            state.perks = parsed.perks.map((p) => ({
+              ...p,
+              image:
+                typeof p.image === "string" &&
+                (p.image.includes("nightlight.gg") || p.image.includes("wiki.gg"))
+                  ? null
+                  : p.image
+            }));
+          } else {
+            state.perks = generateDefaultPerksList();
+          }
+          state.currentBuild = Array.isArray(parsed.currentBuild) ? parsed.currentBuild : [];
+          state.autoRemove = Boolean(parsed.autoRemove);
+          state.soundEnabled = parsed.soundEnabled !== undefined ? Boolean(parsed.soundEnabled) : true;
+        } else {
+          state.perks = generateDefaultPerksList();
+        }
+      } catch (err) {
+        console.error("Error loading state:", err);
+        state.perks = generateDefaultPerksList();
+      }
+
+      // Check URL ?obs=1 parameter
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("obs") === "1") {
+        setObsMode(true, false);
+      }
+    }
+
+    function saveState() {
+      try {
+        const payload = {
+          perks: state.perks,
+          currentBuild: state.currentBuild,
+          autoRemove: state.autoRemove,
+          soundEnabled: state.soundEnabled
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        showToast("⚠️ Almacenamiento lleno. Exporta tu JSON para respaldar.", "warning");
+      }
+    }
+
+    // Toast notification helper
+    function showToast(message, type = "info") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      const colors = {
+        info: "bg-zinc-900 border-zinc-700 text-zinc-100",
+        success: "bg-emerald-950/95 border-emerald-600/70 text-emerald-200",
+        warning: "bg-amber-950/95 border-amber-600/70 text-amber-200",
+        error: "bg-red-950/95 border-red-600/70 text-red-200"
+      };
+      toast.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-2xl backdrop-blur-md transition-all duration-300 ${colors[type] || colors.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(8px)";
+        setTimeout(() => toast.remove(), 300);
+      }, 3200);
+    }
+
+    // Custom Confirmation Dialog
+    function showConfirm(title, message) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById("confirm-modal");
+        document.getElementById("confirm-title").textContent = title;
+        document.getElementById("confirm-message").textContent = message;
+        modal.classList.remove("hidden");
+
+        const cleanup = (result) => {
+          modal.classList.add("hidden");
+          btnAccept.removeEventListener("click", onAccept);
+          btnCancel.removeEventListener("click", onCancel);
+          resolve(result);
+        };
+
+        const btnAccept = document.getElementById("btn-confirm-accept");
+        const btnCancel = document.getElementById("btn-confirm-cancel");
+        const onAccept = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+
+        btnAccept.addEventListener("click", onAccept);
+        btnCancel.addEventListener("click", onCancel);
+      });
+    }
+
+    // Image compression utility for bulk & single icon uploads (keeps localStorage fast and compact)
+    function compressImageToDataURL(file, maxSize = 128) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            let w = img.width;
+            let h = img.height;
+            if (w > maxSize || h > maxSize) {
+              if (w > h) {
+                h = Math.round((h * maxSize) / w);
+                w = maxSize;
+              } else {
+                w = Math.round((w * maxSize) / h);
+                h = maxSize;
+              }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.clearRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL("image/webp", 0.85));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ==========================================
+    // BULK ICON UPLOADER (FOLDER, ZIP & IMAGES)
+    // ==========================================
+    function buildPerkLookupMap() {
+      const lookupMap = new Map();
+      state.perks.forEach((perk) => {
+        const norm = normalizeKey(perk.name);
+        lookupMap.set(norm, perk);
+
+        // Also register without "hex" or "scourgehook" prefix
+        const stripped = norm.replace(/^(hex|scourgehook)/, "");
+        if (stripped && !lookupMap.has(stripped)) {
+          lookupMap.set(stripped, perk);
+        }
+
+        // Register known aliases
+        const aliases = PERK_FILENAME_ALIASES[norm];
+        if (aliases) {
+          aliases.forEach((alias) => lookupMap.set(alias, perk));
+        }
+      });
+      return lookupMap;
+    }
+
+    function findMatchingPerk(filename, lookupMap) {
+      const baseName = filename.split(/[\\/]/).pop() || filename;
+      const fileNorm = normalizeKey(baseName);
+      if (!fileNorm) return null;
+
+      let targetPerk = lookupMap.get(fileNorm);
+      if (!targetPerk) {
+        const strippedFile = fileNorm.replace(/^(hex|scourgehook)/, "");
+        targetPerk = lookupMap.get(strippedFile);
+      }
+      if (!targetPerk && fileNorm.length >= 5) {
+        for (const [key, perk] of lookupMap.entries()) {
+          if (key.length >= 5 && (key.includes(fileNorm) || fileNorm.includes(key))) {
+            targetPerk = perk;
+            break;
+          }
+        }
+      }
+      return targetPerk;
+    }
+
+    async function handleBulkIconsUpload(files) {
+      if (!files || files.length === 0) return;
+
+      const lookupMap = buildPerkLookupMap();
+      const entriesToProcess = [];
+
+      showToast("⏳ Analizando archivos y subcarpetas...", "info");
+
+      for (const file of Array.from(files)) {
+        const lowerName = file.name.toLowerCase();
+
+        // Extract images from .zip Icon Packs
+        if (lowerName.endsWith(".zip")) {
+          if (typeof JSZip === "undefined") {
+            showToast("⚠️ No se pudo cargar el lector ZIP. Prueba con la opción 📁 Carpeta.", "error");
+            continue;
+          }
+          try {
+            const zip = await JSZip.loadAsync(file);
+            for (const [relativePath, zipEntry] of Object.entries(zip.files)) {
+              if (zipEntry.dir) continue;
+              if (!/\.(png|webp|jpg|jpeg)$/i.test(relativePath)) continue;
+              const targetPerk = findMatchingPerk(relativePath, lookupMap);
+              if (targetPerk) {
+                entriesToProcess.push({
+                  perk: targetPerk,
+                  getBlob: () => zipEntry.async("blob")
+                });
+              }
+            }
+          } catch (err) {
+            console.error("Error reading ZIP:", err);
+            showToast(`Error al leer el archivo ZIP "${file.name}".`, "error");
+          }
+        } else if (/\.(png|webp|jpg|jpeg)$/i.test(lowerName) || file.type.startsWith("image/")) {
+          const targetPerk = findMatchingPerk(file.name, lookupMap);
+          if (targetPerk) {
+            entriesToProcess.push({
+              perk: targetPerk,
+              getBlob: async () => file
+            });
+          }
+        }
+      }
+
+      let matchedCount = 0;
+      for (const item of entriesToProcess) {
+        try {
+          const blob = await item.getBlob();
+          const compressedDataUrl = await compressImageToDataURL(blob, 128);
+          item.perk.image = compressedDataUrl;
+          matchedCount++;
+        } catch (e) {
+          console.warn("Failed processing image for:", item.perk.name);
+        }
+      }
+
+      saveState();
+      renderPerksList();
+      renderBuildSlots();
+      drawWheel();
+
+      if (matchedCount > 0) {
+        showToast(`✅ ¡${matchedCount} iconos importados y emparejados automáticamente!`, "success");
+      } else {
+        showToast("No se encontraron iconos de Killer Perks coincidentes en esa selección.", "warning");
+      }
+    }
+
+    function closeEditPerkModal() {
+      document.getElementById("edit-modal").classList.add("hidden");
+    }
+
+    // ==========================================
+    // WHEEL RENDERING & SPIN PHYSICS
+    // ==========================================
+    const canvas = document.getElementById("wheel-canvas");
+    const ctx = canvas.getContext("2d");
+
+    function getActivePerks() {
+      return state.perks.filter((p) => p.enabled);
+    }
+
+    function resizeCanvas() {
+      const container = canvas.parentElement;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const size = Math.max(240, Math.floor(Math.min(rect.width, rect.height)));
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const dpr = window.devicePixelRatio || 1;
+      const size = canvas.width / dpr;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = size / 2 - 12;
+
+      ctx.clearRect(0, 0, size, size);
+
+      const activePerks = getActivePerks();
+      document.getElementById("wheel-active-count").textContent = `${activePerks.length} perks`;
+
+      // Outer metallic bezel
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
+      const bezelGrad = ctx.createLinearGradient(0, 0, size, size);
+      bezelGrad.addColorStop(0, "#7f1d1d");
+      bezelGrad.addColorStop(0.5, "#18181b");
+      bezelGrad.addColorStop(1, "#b45309");
+      ctx.fillStyle = bezelGrad;
+      ctx.fill();
+      ctx.restore();
+
+      if (activePerks.length === 0) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#12121a";
+        ctx.fill();
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "bold 14px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("No hay perks activas", cx, cy - 52);
+        return;
+      }
+
+      const sliceAngle = (Math.PI * 2) / activePerks.length;
+      const showLabels = activePerks.length <= 160;
+      const fontSize = activePerks.length > 100 ? 7.5 : activePerks.length > 60 ? 9 : activePerks.length > 30 ? 11 : 13;
+
+      for (let i = 0; i < activePerks.length; i++) {
+        const perk = activePerks[i];
+        const startAngle = currentRotation + i * sliceAngle;
+        const endAngle = startAngle + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = perk.color || "#1e1b2e";
+        ctx.fill();
+
+        if (activePerks.length <= 180) {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+          ctx.lineWidth = activePerks.length > 90 ? 0.6 : 1.2;
+          ctx.stroke();
+        }
+
+        if (showLabels) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(startAngle + sliceAngle / 2);
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "#f4f4f5";
+          ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+
+          const maxTextWidth = radius * 0.64;
+          let label = perk.name;
+          if (ctx.measureText(label).width > maxTextWidth) {
+            while (label.length > 4 && ctx.measureText(label + "…").width > maxTextWidth) {
+              label = label.slice(0, -1);
+            }
+            label += "…";
+          }
+          ctx.fillText(label, radius - 14, 0);
+          ctx.restore();
+        }
+      }
+
+      // Inner shadow ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.45)";
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    function getPerkAtPointer() {
+      const activePerks = getActivePerks();
+      if (activePerks.length === 0) return null;
+      const sliceAngle = (Math.PI * 2) / activePerks.length;
+      // Pointer is at angle 0 (right side, 3 o'clock)
+      const normalized = (((-currentRotation) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      const index = Math.floor(normalized / sliceAngle) % activePerks.length;
+      return { perk: activePerks[index], index };
+    }
+
+    function spinWheel() {
+      if (isSpinning) return;
+      const activePerks = getActivePerks();
+      if (activePerks.length === 0) {
+        showToast("Activa al menos una perk para girar.", "warning");
+        return;
+      }
+
+      initAudio();
+      isSpinning = true;
+      lastTickIndex = -1;
+
+      const extraSpins = 6 + Math.random() * 5;
+      const targetOffset = Math.random() * Math.PI * 2;
+      const totalDelta = extraSpins * Math.PI * 2 + targetOffset;
+      const startRotation = currentRotation;
+      const duration = 3800 + Math.random() * 900;
+      const startTime = performance.now();
+      const pointerEl = document.getElementById("wheel-pointer");
+
+      function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Cubic ease-out
+        const ease = 1 - Math.pow(1 - progress, 3.4);
+        currentRotation = startRotation + totalDelta * ease;
+        drawWheel();
+
+        const currentHit = getPerkAtPointer();
+        if (currentHit && currentHit.index !== lastTickIndex) {
+          lastTickIndex = currentHit.index;
+          playTickSound();
+          pointerEl.classList.remove("pointer-tick");
+          void pointerEl.offsetWidth;
+          pointerEl.classList.add("pointer-tick");
+        }
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          const winnerObj = getPerkAtPointer();
+          if (winnerObj && winnerObj.perk) {
+            onPerkSelected(winnerObj.perk);
+          }
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function onPerkSelected(perk) {
+      currentWinnerPerk = perk;
+      playWinSound();
+
+      // Add to 4-perk build loadout (replace oldest if 4 full)
+      if (!state.currentBuild.includes(perk.id)) {
+        if (state.currentBuild.length >= 4) {
+          state.currentBuild.shift();
+        }
+        state.currentBuild.push(perk.id);
+      }
+
+      if (state.autoRemove) {
+        perk.enabled = false;
+      }
+
+      saveState();
+      renderPerksList();
+      renderBuildSlots();
+      drawWheel();
+      openWinnerModal(perk);
+    }
+
+    function rollFullFourPerkBuild() {
+      if (isSpinning) return;
+      const activePerks = getActivePerks();
+      if (activePerks.length < 4) {
+        showToast("Necesitas al menos 4 perks activas para generar una build completa.", "warning");
+        return;
+      }
+
+      initAudio();
+      const pool = [...activePerks];
+      const chosen = [];
+      for (let i = 0; i < 4; i++) {
+        const randIdx = Math.floor(Math.random() * pool.length);
+        const [picked] = pool.splice(randIdx, 1);
+        chosen.push(picked);
+        if (state.autoRemove) {
+          picked.enabled = false;
+        }
+      }
+
+      state.currentBuild = chosen.map((p) => p.id);
+      saveState();
+      renderPerksList();
+      renderBuildSlots();
+      drawWheel();
+      playWinSound();
+      showToast("💀 ¡Build completa de 4 Killer Perks generada!", "success");
+    }
+
+    // ==========================================
+    // VISUAL HELPERS & MODALS
+    // ==========================================
+    function getPerkInitials(name) {
+      return name
+        .replace(/^(Hex:|Scourge Hook:)\s*/i, "")
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0] || "")
+        .join("")
+        .toUpperCase();
+    }
+
+    function getDiamondCategoryClass(category) {
+      if (category === "Hex") return "category-hex";
+      if (category === "Scourge Hook") return "category-scourge";
+      return "";
+    }
+
+    function getPerkVisualInnerHTML(perk, sizeClass = "w-14 h-14 text-base") {
+      if (perk.image) {
+        return `<img src="${perk.image}" alt="${perk.name}" class="${sizeClass} object-contain pointer-events-none select-none" />`;
+      }
+      const badge = perk.category === "Hex" ? "HEX" : perk.category === "Scourge Hook" ? "SH" : "";
+      return `
+        <div class="flex flex-col items-center justify-center text-center leading-none">
+          <span class="font-dbd font-black text-amber-200 tracking-wider ${sizeClass.includes("w-20") ? "text-xl" : "text-sm"}">${getPerkInitials(perk.name)}</span>
+          ${badge ? `<span class="text-[8px] font-bold uppercase tracking-widest text-red-300 mt-0.5">${badge}</span>` : ""}
+        </div>
+      `;
+    }
+
+    function openWinnerModal(perk) {
+      const modal = document.getElementById("winner-modal");
+      const frame = document.getElementById("modal-diamond-frame");
+      frame.className = `dbd-diamond w-28 h-28 rounded-2xl flex items-center justify-center overflow-hidden ${getDiamondCategoryClass(perk.category)}`;
+      document.getElementById("modal-diamond-content").innerHTML = getPerkVisualInnerHTML(perk, "w-20 h-20");
+      document.getElementById("modal-perk-name").textContent = perk.name;
+      document.getElementById("modal-perk-owner").textContent = `${perk.killer} • ${perk.category} Perk`;
+      modal.classList.remove("hidden");
+    }
+
+    function closeWinnerModal() {
+      document.getElementById("winner-modal").classList.add("hidden");
+    }
+
+    function updateEditModalImagePreview() {
+      const preview = document.getElementById("edit-image-preview");
+      const noImg = document.getElementById("edit-no-image-text");
+      const removeBtn = document.getElementById("btn-remove-perk-image");
+      if (editingPerkImageTemp) {
+        preview.src = editingPerkImageTemp;
+        preview.classList.remove("hidden");
+        noImg.classList.add("hidden");
+        removeBtn.classList.remove("hidden");
+      } else {
+        preview.src = "";
+        preview.classList.add("hidden");
+        noImg.classList.remove("hidden");
+        removeBtn.classList.add("hidden");
+      }
+    }
+
+    function openEditPerkModal(perkId) {
+      const modal = document.getElementById("edit-modal");
+      const deleteBtn = document.getElementById("btn-delete-custom-perk");
+
+      if (perkId) {
+        const perk = state.perks.find((p) => p.id === perkId);
+        if (!perk) return;
+        document.getElementById("edit-modal-title").textContent = "Editar Killer Perk";
+        document.getElementById("edit-perk-id").value = perk.id;
+        document.getElementById("edit-perk-name").value = perk.name;
+        document.getElementById("edit-perk-killer").value = perk.killer;
+        document.getElementById("edit-perk-category").value = perk.category;
+        document.getElementById("edit-perk-color").value = perk.color || "#991b1b";
+        document.getElementById("edit-color-hex").textContent = perk.color || "#991b1b";
+        editingPerkImageTemp = perk.image || null;
+        deleteBtn.classList.toggle("hidden", !perk.isCustom);
+      } else {
+        document.getElementById("edit-modal-title").textContent = "Añadir Nueva Perk";
+        document.getElementById("edit-perk-id").value = "";
+        document.getElementById("edit-perk-name").value = "";
+        document.getElementById("edit-perk-killer").value = "General";
+        document.getElementById("edit-perk-category").value = "Standard";
+        document.getElementById("edit-perk-color").value = "#991b1b";
+        document.getElementById("edit-color-hex").textContent = "#991b1b";
+        editingPerkImageTemp = null;
+        deleteBtn.classList.add("hidden");
+      }
+
+      updateEditModalImagePreview();
+      modal.classList.remove("hidden");
+    }
+
+    // ==========================================
+    // 4-PERK BUILD SLOTS & CATALOG LIST RENDERING
+    // ==========================================
+    function renderBuildSlots() {
+      const grid = document.getElementById("build-slots-grid");
+      grid.innerHTML = "";
+
+      for (let i = 0; i < 4; i++) {
+        const perkId = state.currentBuild[i];
+        const perk = perkId ? state.perks.find((p) => p.id === perkId) : null;
+
+        const slotCard = document.createElement("div");
+        slotCard.className = "relative rounded-xl bg-zinc-950/90 border border-zinc-800/90 p-3 flex flex-col items-center justify-between text-center min-h-[146px] group";
+
+        if (perk) {
+          slotCard.innerHTML = `
+            <button type="button" data-slot-reroll="${i}" title="Re-rollear este slot"
+              class="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-zinc-800/90 hover:bg-amber-600 text-[11px] text-zinc-300 hover:text-white opacity-80 group-hover:opacity-100 transition cursor-pointer">
+              🎲
+            </button>
+            <div class="my-2 flex items-center justify-center">
+              <div class="dbd-diamond w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden ${getDiamondCategoryClass(perk.category)}">
+                <div class="dbd-diamond-inner w-full h-full flex items-center justify-center">
+                  ${getPerkVisualInnerHTML(perk, "w-10 h-10")}
+                </div>
+              </div>
+            </div>
+            <div class="mt-1 w-full">
+              <p class="text-[11px] font-bold text-zinc-100 leading-tight line-clamp-2">${perk.name}</p>
+              <p class="text-[10px] text-zinc-500 truncate mt-0.5">${perk.killer}</p>
+            </div>
+          `;
+        } else {
+          slotCard.innerHTML = `
+            <div class="my-auto flex flex-col items-center justify-center text-zinc-600">
+              <div class="w-11 h-11 rotate-45 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center mb-2">
+                <span class="-rotate-45 text-xs font-bold">${i + 1}</span>
+              </div>
+              <span class="text-[10px]">Slot vacío</span>
+            </div>
+          `;
+        }
+
+        grid.appendChild(slotCard);
+      }
+
+      grid.querySelectorAll("[data-slot-reroll]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const slotIdx = Number(btn.getAttribute("data-slot-reroll"));
+          const available = getActivePerks().filter((p) => !state.currentBuild.includes(p.id));
+          if (available.length === 0) {
+            showToast("No quedan otras perks activas disponibles.", "warning");
+            return;
+          }
+          const replacement = available[Math.floor(Math.random() * available.length)];
+          state.currentBuild[slotIdx] = replacement.id;
+          if (state.autoRemove) replacement.enabled = false;
+          saveState();
+          renderPerksList();
+          renderBuildSlots();
+          drawWheel();
+          playTickSound();
+        });
+      });
+    }
+
+    function populateKillerFilterDropdown() {
+      const select = document.getElementById("killer-filter-select");
+      const currentVal = state.killerFilter;
+      const killers = Array.from(new Set(state.perks.map((p) => p.killer))).sort((a, b) => {
+        if (a === "General") return -1;
+        if (b === "General") return 1;
+        return a.localeCompare(b);
+      });
+
+      select.innerHTML = `<option value="ALL">Todos los Killers (${killers.length})</option>`;
+      killers.forEach((k) => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        select.appendChild(opt);
+      });
+      select.value = killers.includes(currentVal) ? currentVal : "ALL";
+    }
+
+    function getFilteredPerks() {
+      const q = state.searchQuery.trim().toLowerCase();
+      return state.perks.filter((p) => {
+        if (state.killerFilter !== "ALL" && p.killer !== state.killerFilter) return false;
+        if (state.categoryFilter === "ENABLED" && !p.enabled) return false;
+        if (state.categoryFilter === "Hex" && p.category !== "Hex") return false;
+        if (state.categoryFilter === "Scourge Hook" && p.category !== "Scourge Hook") return false;
+        if (state.categoryFilter === "General" && p.killer !== "General") return false;
+        if (state.categoryFilter === "WITH_ICON" && !p.image) return false;
+
+        if (q) {
+          const matchName = p.name.toLowerCase().includes(q);
+          const matchKiller = p.killer.toLowerCase().includes(q);
+          const matchCat = p.category.toLowerCase().includes(q);
+          if (!matchName && !matchKiller && !matchCat) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderPerksList() {
+      const container = document.getElementById("perks-list-container");
+      const filtered = getFilteredPerks();
+      const total = state.perks.length;
+      const enabledCount = state.perks.filter((p) => p.enabled).length;
+      const withIconsCount = state.perks.filter((p) => Boolean(p.image)).length;
+
+      document.getElementById("catalog-stats").textContent =
+        `${enabledCount}/${total} activas • ${withIconsCount} con icono • Mostrando ${filtered.length}`;
+
+      const disabledCount = total - enabledCount;
+      document.getElementById("disabled-counter-badge").textContent =
+        disabledCount > 0 ? `${disabledCount} desactivadas` : "";
+
+      container.innerHTML = "";
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 text-zinc-500 text-xs">
+            No se encontraron perks con esos filtros.
+          </div>
+        `;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      filtered.forEach((perk) => {
+        const row = document.createElement("div");
+        row.draggable = true;
+        row.dataset.id = perk.id;
+        row.className = `flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl border transition select-none ${
+          perk.enabled
+            ? "bg-zinc-900/80 border-zinc-800 hover:border-zinc-700"
+            : "bg-zinc-950/60 border-zinc-900 opacity-50"
+        }`;
+
+        const badgeColor =
+          perk.category === "Hex"
+            ? "text-purple-300 bg-purple-950/80 border-purple-700/40"
+            : perk.category === "Scourge Hook"
+            ? "text-red-300 bg-red-950/80 border-red-700/40"
+            : "text-zinc-400 bg-zinc-800/80 border-zinc-700/40";
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            <input type="checkbox" ${perk.enabled ? "checked" : ""}
+              class="perk-toggle-chk w-4 h-4 rounded accent-red-600 bg-zinc-950 border-zinc-700 cursor-pointer shrink-0" />
+
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border border-zinc-700/70 overflow-hidden"
+              style="background-color: ${perk.color || "#1e1b2e"}">
+              ${
+                perk.image
+                  ? `<img src="${perk.image}" alt="" class="w-7 h-7 object-contain" />`
+                  : `<span class="font-dbd text-[10px] font-bold text-amber-200">${getPerkInitials(perk.name)}</span>`
+              }
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-semibold text-zinc-100 truncate">${perk.name}</span>
+                ${
+                  perk.category !== "Standard"
+                    ? `<span class="text-[9px] font-bold px-1.5 py-0.2 rounded border shrink-0 ${badgeColor}">${perk.category}</span>`
+                    : ""
+                }
+              </div>
+              <p class="text-[10px] text-zinc-500 truncate">${perk.killer}</p>
+            </div>
+          </div>
+
+          <button type="button" title="Editar perk o subir icono"
+            class="perk-edit-btn w-7 h-7 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 text-xs flex items-center justify-center shrink-0 transition cursor-pointer">
+            ✏️
+          </button>
+        `;
+
+        row.querySelector(".perk-toggle-chk").addEventListener("change", (e) => {
+          perk.enabled = e.target.checked;
+          saveState();
+          renderPerksList();
+          drawWheel();
+        });
+
+        row.querySelector(".perk-edit-btn").addEventListener("click", () => {
+          openEditPerkModal(perk.id);
+        });
+
+        // Drag and drop reordering
+        row.addEventListener("dragstart", () => {
+          draggedPerkId = perk.id;
+          row.classList.add("dragging-item");
+        });
+        row.addEventListener("dragend", () => {
+          draggedPerkId = null;
+          row.classList.remove("dragging-item");
+        });
+        row.addEventListener("dragover", (e) => {
+          e.preventDefault();
+        });
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (!draggedPerkId || draggedPerkId === perk.id) return;
+          const fromIdx = state.perks.findIndex((p) => p.id === draggedPerkId);
+          const toIdx = state.perks.findIndex((p) => p.id === perk.id);
+          if (fromIdx !== -1 && toIdx !== -1) {
+            const [moved] = state.perks.splice(fromIdx, 1);
+            state.perks.splice(toIdx, 0, moved);
+            saveState();
+            renderPerksList();
+            drawWheel();
+          }
+        });
+
+        fragment.appendChild(row);
+      });
+
+      container.appendChild(fragment);
+    }
+
+    // ==========================================
+    // OBS STUDIO TRANSPARENT OVERLAY MODE
+    // ==========================================
+    function setObsMode(enabled, updateUrl = true) {
+      state.obsMode = enabled;
+      const exitBtn = document.getElementById("btn-exit-obs");
+      if (enabled) {
+        document.body.classList.add("obs-mode");
+        exitBtn.classList.remove("hidden");
+      } else {
+        document.body.classList.remove("obs-mode");
+        exitBtn.classList.add("hidden");
+      }
+
+      if (updateUrl && window.location.protocol !== "blob:") {
+        try {
+          const url = new URL(window.location.href);
+          if (enabled) url.searchParams.set("obs", "1");
+          else url.searchParams.delete("obs");
+          window.history.replaceState({}, "", url);
+        } catch (err) {
+          // Ignore History API restrictions in sandboxed environments
+        }
+      }
+
+      setTimeout(resizeCanvas, 50);
+    }
+
+    // ==========================================
+    // EVENT LISTENERS INITIALIZATION
+    // ==========================================
+    function bindEvents() {
+      window.addEventListener("resize", resizeCanvas);
+
+      // Spin Triggers
+      document.getElementById("btn-center-spin").addEventListener("click", () => spinWheel());
+      document.getElementById("btn-spin-single").addEventListener("click", () => spinWheel());
+      canvas.addEventListener("click", () => spinWheel());
+      document.getElementById("btn-spin-build").addEventListener("click", rollFullFourPerkBuild);
+
+      // Spacebar shortcut for spinning
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          const activeTag = document.activeElement?.tagName;
+          if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") return;
+          e.preventDefault();
+          if (!document.getElementById("winner-modal").classList.contains("hidden")) {
+            closeWinnerModal();
+          } else {
+            spinWheel();
+          }
+        } else if (e.code === "Escape") {
+          closeWinnerModal();
+          closeEditPerkModal();
+        }
+      });
+
+      // Auto-remove checkbox
+      const chkAutoRemove = document.getElementById("chk-auto-remove");
+      chkAutoRemove.checked = state.autoRemove;
+      chkAutoRemove.addEventListener("change", (e) => {
+        state.autoRemove = e.target.checked;
+        saveState();
+      });
+
+      // Restore all perks
+      document.getElementById("btn-restore-all").addEventListener("click", () => {
+        state.perks.forEach((p) => (p.enabled = true));
+        saveState();
+        renderPerksList();
+        drawWheel();
+        showToast("Todas las perks han sido reactivadas.", "info");
+      });
+
+      // Sound toggle
+      const updateSoundUI = () => {
+        document.getElementById("sound-icon").textContent = state.soundEnabled ? "🔊" : "🔇";
+        document.getElementById("sound-label").textContent = state.soundEnabled ? "Sonido: ON" : "Sonido: OFF";
+      };
+      updateSoundUI();
+      document.getElementById("btn-sound-toggle").addEventListener("click", () => {
+        state.soundEnabled = !state.soundEnabled;
+        updateSoundUI();
+        saveState();
+      });
+
+      // OBS Mode toggles
+      document.getElementById("btn-obs-mode").addEventListener("click", () => setObsMode(true));
+      document.getElementById("btn-exit-obs").addEventListener("click", () => setObsMode(false));
+
+      // Copy & Clear 4-Perk Build
+      document.getElementById("btn-copy-build").addEventListener("click", () => {
+        const names = state.currentBuild
+          .map((id) => state.perks.find((p) => p.id === id)?.name)
+          .filter(Boolean);
+        if (names.length === 0) {
+          showToast("La build actual está vacía.", "warning");
+          return;
+        }
+        const text = `DbD Killer Build: ${names.join(" | ")}`;
+        const tempInput = document.createElement("textarea");
+        tempInput.value = text;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        showToast("📋 Build copiada al portapapeles.", "success");
+      });
+
+      document.getElementById("btn-clear-build").addEventListener("click", () => {
+        state.currentBuild = [];
+        saveState();
+        renderBuildSlots();
+      });
+
+      // Search input & Killer select
+      const searchInput = document.getElementById("search-input");
+      const clearSearchBtn = document.getElementById("btn-clear-search");
+      searchInput.addEventListener("input", (e) => {
+        state.searchQuery = e.target.value;
+        clearSearchBtn.classList.toggle("hidden", !state.searchQuery);
+        renderPerksList();
+      });
+
+      clearSearchBtn.addEventListener("click", () => {
+        state.searchQuery = "";
+        searchInput.value = "";
+        clearSearchBtn.classList.add("hidden");
+        renderPerksList();
+      });
+
+      document.getElementById("killer-filter-select").addEventListener("change", (e) => {
+        state.killerFilter = e.target.value;
+        renderPerksList();
+      });
+
+      // Category Filter Pills
+      document.querySelectorAll(".cat-pill").forEach((pill) => {
+        pill.addEventListener("click", () => {
+          document.querySelectorAll(".cat-pill").forEach((el) => {
+            el.classList.remove("bg-red-700", "text-white");
+            el.classList.add("bg-zinc-900", "text-zinc-400");
+          });
+          pill.classList.remove("bg-zinc-900", "text-zinc-400");
+          pill.classList.add("bg-red-700", "text-white");
+          state.categoryFilter = pill.getAttribute("data-cat");
+          renderPerksList();
+        });
+      });
+
+      // Enable / Disable filtered batch
+      document.getElementById("btn-enable-filtered").addEventListener("click", () => {
+        const filtered = getFilteredPerks();
+        filtered.forEach((p) => (p.enabled = true));
+        saveState();
+        renderPerksList();
+        drawWheel();
+        showToast(`${filtered.length} perks activadas.`, "info");
+      });
+
+      document.getElementById("btn-disable-filtered").addEventListener("click", () => {
+        const filtered = getFilteredPerks();
+        filtered.forEach((p) => (p.enabled = false));
+        saveState();
+        renderPerksList();
+        drawWheel();
+        showToast(`${filtered.length} perks desactivadas.`, "info");
+      });
+
+      // Winner Modal Buttons
+      document.getElementById("btn-modal-close").addEventListener("click", closeWinnerModal);
+      document.getElementById("winner-modal").addEventListener("click", (e) => {
+        if (e.target.id === "winner-modal") closeWinnerModal();
+      });
+
+      document.getElementById("btn-modal-remove-perk").addEventListener("click", () => {
+        if (currentWinnerPerk) {
+          currentWinnerPerk.enabled = false;
+          saveState();
+          renderPerksList();
+          drawWheel();
+          showToast(`"${currentWinnerPerk.name}" eliminada de la ruleta.`, "info");
+        }
+        closeWinnerModal();
+      });
+
+      document.getElementById("btn-modal-edit-perk").addEventListener("click", () => {
+        if (currentWinnerPerk) {
+          const id = currentWinnerPerk.id;
+          closeWinnerModal();
+          openEditPerkModal(id);
+        }
+      });
+
+      // Add / Edit Modal Events
+      document.getElementById("btn-open-add-perk").addEventListener("click", () => openEditPerkModal(null));
+      document.getElementById("btn-close-edit-modal").addEventListener("click", closeEditPerkModal);
+      document.getElementById("btn-cancel-edit").addEventListener("click", closeEditPerkModal);
+
+      document.getElementById("edit-perk-color").addEventListener("input", (e) => {
+        document.getElementById("edit-color-hex").textContent = e.target.value;
+      });
+
+      document.getElementById("edit-perk-image-file").addEventListener("change", async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        editingPerkImageTemp = await compressImageToDataURL(file, 128);
+        updateEditModalImagePreview();
+      });
+
+      document.getElementById("btn-remove-perk-image").addEventListener("click", () => {
+        editingPerkImageTemp = null;
+        updateEditModalImagePreview();
+      });
+
+      document.getElementById("edit-perk-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const id = document.getElementById("edit-perk-id").value;
+        const name = document.getElementById("edit-perk-name").value.trim();
+        const killer = document.getElementById("edit-perk-killer").value.trim() || "General";
+        const category = document.getElementById("edit-perk-category").value;
+        const color = document.getElementById("edit-perk-color").value;
+
+        if (!name) return;
+
+        if (id) {
+          const perk = state.perks.find((p) => p.id === id);
+          if (perk) {
+            perk.name = name;
+            perk.killer = killer;
+            perk.category = category;
+            perk.color = color;
+            perk.image = editingPerkImageTemp;
+          }
+          showToast(`Perk "${name}" actualizada.`, "success");
+        } else {
+          const newPerk = {
+            id: "custom_" + Date.now(),
+            name,
+            killer,
+            category,
+            color,
+            image: editingPerkImageTemp,
+            enabled: true,
+            isCustom: true
+          };
+          state.perks.unshift(newPerk);
+          showToast(`Perk "${name}" añadida a la ruleta.`, "success");
+        }
+
+        saveState();
+        populateKillerFilterDropdown();
+        renderPerksList();
+        renderBuildSlots();
+        drawWheel();
+        closeEditPerkModal();
+      });
+
+      document.getElementById("btn-delete-custom-perk").addEventListener("click", async () => {
+        const id = document.getElementById("edit-perk-id").value;
+        const perk = state.perks.find((p) => p.id === id);
+        if (!perk) return;
+        const confirmed = await showConfirm("Eliminar Perk", `¿Eliminar "${perk.name}" permanentemente de tu lista?`);
+        if (confirmed) {
+          state.perks = state.perks.filter((p) => p.id !== id);
+          state.currentBuild = state.currentBuild.filter((bId) => bId !== id);
+          saveState();
+          populateKillerFilterDropdown();
+          renderPerksList();
+          renderBuildSlots();
+          drawWheel();
+          closeEditPerkModal();
+          showToast(`Perk "${perk.name}" eliminada.`, "info");
+        }
+      });
+
+      // Bulk Icon Upload (Folder & ZIP/Images)
+      document.getElementById("input-folder-icons").addEventListener("change", (e) => {
+        handleBulkIconsUpload(e.target.files);
+        e.target.value = "";
+      });
+
+      document.getElementById("input-bulk-icons").addEventListener("change", (e) => {
+        handleBulkIconsUpload(e.target.files);
+        e.target.value = "";
+      });
+
+      // Export JSON Backup
+      document.getElementById("btn-export-json").addEventListener("click", () => {
+        const dataStr = JSON.stringify(state.perks, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "dbd_killer_perks_backup.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("💾 Respaldo JSON exportado.", "success");
+      });
+
+      // Import JSON Backup
+      document.getElementById("input-import-json").addEventListener("change", (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (Array.isArray(imported) && imported.length > 0 && imported[0].name) {
+              state.perks = imported;
+              saveState();
+              populateKillerFilterDropdown();
+              renderPerksList();
+              renderBuildSlots();
+              drawWheel();
+              showToast(`📂 ${imported.length} perks importadas con éxito.`, "success");
+            } else {
+              showToast("El archivo JSON no tiene el formato válido.", "error");
+            }
+          } catch (err) {
+            showToast("Error al leer el archivo JSON.", "error");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+      });
+
+      // Factory Reset
+      document.getElementById("btn-factory-reset").addEventListener("click", async () => {
+        const confirmed = await showConfirm(
+          "Restablecer lista original",
+          "Esto restaurará todas las Killer Perks predeterminadas y borrará los iconos o ediciones personalizadas."
+        );
+        if (confirmed) {
+          state.perks = generateDefaultPerksList();
+          state.currentBuild = [];
+          saveState();
+          populateKillerFilterDropdown();
+          renderPerksList();
+          renderBuildSlots();
+          drawWheel();
+          showToast("Lista original restablecida.", "info");
+        }
+      });
+    }
+
+    // Initialize Application
+    window.addEventListener("DOMContentLoaded", () => {
+      loadState();
+      populateKillerFilterDropdown();
+      renderPerksList();
+      renderBuildSlots();
+      bindEvents();
+      resizeCanvas();
+    });
+  </script>
+</body>
+</html>
